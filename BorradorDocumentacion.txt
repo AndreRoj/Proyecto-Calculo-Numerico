@@ -1,0 +1,14 @@
+py -m pip install pillow (Biblioteca para cargar imagen)
+py -m pip install opencv-python (Biblioteca del Canny Edge Detector)
+
+Se coloca la imagen en la misma carpeta del programa de python
+Se ejecuta el programa a través de la consola con py ProyectoCalculo.py
+El programa carga la imagen detallada en el código, hace un recorrido pixel por pixel y lo convierte a escala de grises
+
+Paso seguido el programa aplica el cv2.Canny el cual realiza los siguientes pasos del Canny Edge Detector:
+*Aplica un filtro gaussiano para reducir el ruido de la imagen
+*Se calcula el gradiente de intensidad sobre cada pixel de la imagen para encontrar los cambios bruscos de color (Posibles bordes)
+*Se conservan los pixeles que sean máximos locales para afinar los bordes
+*Los threshold definen el valor de los gradientes a rechazar o aceptar como bordes fuertes (Menor se descartan, mayor se aceptan y en medio solo los conectados a mayores)
+*Los thresholds se pueden editar, si no aparecen suficientes bordes se puede bajar el threshold2 y si hay demasiados bordes falsos se sube el threshold1
+
