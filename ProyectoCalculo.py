@@ -1,6 +1,7 @@
 from PIL import Image
 import cv2
 import numpy as np
+import pandas as pd
 
 # Fórmula para convertir un color RGB a su escala de grises
 def rgb_to_grayscale(r, g, b):
@@ -115,6 +116,52 @@ def filter_coordinates(coordinates, image_path):
 
     return coordenadas_filtradas
 
+def interpolacion_splines_cubicos(coordinates):
+    # Crear matriz de 3 filas × N columnas para los puntos(k, xk, yk)
+    matrizpoint = np.zeros((3, len(coordinates)))  # Inicializar con ceros
+
+    # Llenar las filas para la matriz de puntos:
+    matrizpoint[0, :] = np.arange(len(coordinates))  # valor de k de 0 a n numero de puntos
+    matrizpoint[1, :] = coordinates[:,0] #valor de xk
+    matrizpoint[2, :] = coordinates[:,1] #valor de yk
+
+    # Crear matriz de 4 filas × N columnas para los puntos(k, hk, λk, μk)
+    matriz = np.zeros((4, len(coordinates)))  # Inicializar con ceros        
+
+    #Calculos para hk, λk, μk
+    for i in range(0,len(coordinates)-1):
+        #Calculos para hk, intervalo, hk = xk+1 − xk
+        xkmas = matrizpoint[1, i+1]
+        xk = matrizpoint[1, i]
+        hk = xkmas - xk
+        matriz[0, i] = hk
+        # print(f'valor xk+1:{xkmas} y valor de xk:{xk}, total: {hk}')
+        
+        # Calculos para λk, λk = (yk+1 − yk)/hk
+        ykmas = matrizpoint[2, i+1]
+        yk = matrizpoint[2, i]
+        landak = (ykmas - yk)/hk
+        matriz[1, i] = landak
+
+        # Calculos para μk
+
+
+    df = pd.DataFrame(
+        [["k"] + matrizpoint[0, :].tolist(),
+        ["xk"] + matrizpoint[1, :].tolist(),
+        ["yk"] + matrizpoint[2, :].tolist(),
+        ["hk"] + matriz[0, :].tolist(),
+        ["λk"] + matriz[1, :].tolist(),
+        ]
+    )
+
+    # Exportar a Excel
+    nombre_archivo = "matriz_puntos.xlsx"
+    df.to_excel(nombre_archivo, header=False, index=False)  # index=False evita una columna extra de índices
+
+    print(f"✅ Datos exportados a '{nombre_archivo}'")
+
+             
 
 
 if __name__ == "__main__":
@@ -124,6 +171,7 @@ if __name__ == "__main__":
     edges_image = convert_to_grayscale(input_image, grayscale_image)
     coordinates = find_coordinates(edges_image, cv2.imread(input_image))
     coordinates_filter = filter_coordinates(coordinates, cv2.imread(input_image))
+    interpolacion_splines_cubicos(coordinates_filter)
     print("=== Finalizado ===")
 
 
