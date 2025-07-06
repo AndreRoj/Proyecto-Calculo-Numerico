@@ -125,8 +125,8 @@ def interpolacion_splines_cubicos(coordinates):
     matrizpoint[1, :] = coordinates[:,0] #valor de xk
     matrizpoint[2, :] = coordinates[:,1] #valor de yk
 
-    # Crear matriz de 4 filas × N columnas para los puntos(k, hk, λk, μk)
-    matriz = np.zeros((4, len(coordinates)))  # Inicializar con ceros        
+    # Crear matriz de 4 filas × n-1 columnas para los puntos(k, hk, λk, μk)
+    matriz_elementos = np.zeros((4, len(coordinates)-1))  # Inicializar con ceros        
 
     #Calculos para hk, λk
     for i in range(0,len(coordinates)-1):
@@ -134,47 +134,87 @@ def interpolacion_splines_cubicos(coordinates):
         xkmas = matrizpoint[1, i+1]
         xk = matrizpoint[1, i]
         hk = xkmas - xk
-        matriz[0, i] = hk
+        matriz_elementos[0, i] = hk
         # print(f'valor xk+1:{xkmas} y valor de xk:{xk}, total: {hk}')
         
         # Calculos para λk, λk = (yk+1 − yk)/hk
         ykmas = matrizpoint[2, i+1]
         yk = matrizpoint[2, i]
         landak = (ykmas - yk)/hk
-        matriz[1, i] = landak
+        matriz_elementos[1, i] = landak
 
     #Calculos para μk
-    for i in range(0,len(coordinates)):
+    for i in range(0,len(coordinates)-1):
         # Calculos para μk, μk = (λk − λk-1)*3
         if(i-1 >= 0):
-            landk1 = matriz[1, i] #λk
-            landkmenos = matriz[1, i-1] #λk-1
+            landk1 = matriz_elementos[1, i] #λk
+            landkmenos = matriz_elementos[1, i-1] #λk-1
             muk = (landk1 - landkmenos)*3 #μk
-            matriz[2, i] = muk
+            matriz_elementos[2, i] = muk
+
+    #se pasa la matrizpoint con los datos de los puntos(k,xk,yk)
+    #y la matriz_elementos con los datos valores calculadors de (hk,λk,μk)
+    #nos retorna la matriz de spline natural
+    matriz_SplineN = borde_spline_natural(matriz_elementos)
 
 
 
-    df = pd.DataFrame(
+    df_coord_element = pd.DataFrame(
         [
-        ['Coordenadas']
+        ['--- COORDENADAS ---'],
         ["k"] + matrizpoint[0, :].tolist(),
         ["xk"] + matrizpoint[1, :].tolist(),
         ["yk"] + matrizpoint[2, :].tolist(),
         [''],
-        ['Calculo de los elementos de la matriz']
-        ["hk"] + matriz[0, :].tolist(),
-        ["λk"] + matriz[1, :].tolist(),
-        ["μk"] + matriz[2, :].tolist(),
+        ['--- Matriz Elementos ---'],
+        ["hk"] + matriz_elementos[0, :].tolist(),
+        ["λk"] + matriz_elementos[1, :].tolist(),
+        ["μk"] + matriz_elementos[2, :].tolist(),
         ]
+    )
+
+    df_splineNatu = pd.DataFrame(
+        matriz_SplineN
     )
 
     # Exportar a Excel
     nombre_archivo = "matriz_puntos.xlsx"
-    df.to_excel(nombre_archivo, header=False, index=False)  # index=False evita una columna extra de índices
+    with pd.ExcelWriter(nombre_archivo, engine='openpyxl') as writer:
+        df_coord_element.to_excel(writer, sheet_name='Coordenadas y Elementos', header=False, index=False)  # index=False evita una columna extra de índices
+        df_splineNatu.to_excel(writer, sheet_name='Spline Natural', header=False, index=False)  # index=False evita una columna extra de índices
 
     print(f"✅ Datos exportados a '{nombre_archivo}'")
 
-             
+def borde_spline_natural(matriz_elementos): #S''(x0) = 0, S'' (xn) = 0,
+    # Crear matriz de n filas × n columnas
+    n = matriz_elementos.shape[1]
+    matrizspline_natural = np.zeros((n,n))
+    #print(n)
+    for fila in range(0,n):
+        for colum in range(0,n):
+            if (fila==0 and colum==0) or (fila==n-1 and colum==n-1):
+                matrizspline_natural[fila,colum] = 1
+                #print('entro')
+            elif (fila==colum):
+                # print(f'f {fila} y c {colum}')
+                # hk
+                hk = matriz_elementos[0,colum-1]
+                matrizspline_natural[fila,colum-1] = hk
+                #print(f'h{fila-1} {hk}')
+                # hk+1
+                hkmas= matriz_elementos[0,colum]
+                #print(f'h{fila} {hkmas}')
+                matrizspline_natural[fila,colum+1] = hkmas
+                #2(hk + hk+1)
+                matrizspline_natural[fila,colum] = 2*(hk+hkmas)
+                if(fila+1 < n-1):
+                    matrizspline_natural[fila+1,colum] = hkmas
+                if(fila-1 > 0):
+                    matrizspline_natural[fila-1,colum] = hk
+
+    #print(matrizspline_natural)
+    return matrizspline_natural
+                
 
 
 if __name__ == "__main__":
