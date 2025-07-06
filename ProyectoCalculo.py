@@ -103,8 +103,8 @@ def filter_coordinates(coordinates, image_path):
     _, indices_unicos = np.unique(coordenadas_ordenadas[:, 0], return_index=True)
     coordenadas_filtradas = coordenadas_ordenadas[indices_unicos]
 
-    print("Coordenadas filtradas (x único, y más pequeño):")
-    print(coordenadas_filtradas)
+    # print("Coordenadas filtradas (x único, y más pequeño):")
+    # print(coordenadas_filtradas)
 
     # Mostrar la imagen con los puntos
     for (x, y) in coordenadas_filtradas:
@@ -128,7 +128,7 @@ def interpolacion_splines_cubicos(coordinates):
     # Crear matriz de 4 filas × N columnas para los puntos(k, hk, λk, μk)
     matriz = np.zeros((4, len(coordinates)))  # Inicializar con ceros        
 
-    #Calculos para hk, λk, μk
+    #Calculos para hk, λk
     for i in range(0,len(coordinates)-1):
         #Calculos para hk, intervalo, hk = xk+1 − xk
         xkmas = matrizpoint[1, i+1]
@@ -143,15 +143,28 @@ def interpolacion_splines_cubicos(coordinates):
         landak = (ykmas - yk)/hk
         matriz[1, i] = landak
 
-        # Calculos para μk
+    #Calculos para μk
+    for i in range(0,len(coordinates)):
+        # Calculos para μk, μk = (λk − λk-1)*3
+        if(i-1 >= 0):
+            landk1 = matriz[1, i] #λk
+            landkmenos = matriz[1, i-1] #λk-1
+            muk = (landk1 - landkmenos)*3 #μk
+            matriz[2, i] = muk
+
 
 
     df = pd.DataFrame(
-        [["k"] + matrizpoint[0, :].tolist(),
+        [
+        ['Coordenadas']
+        ["k"] + matrizpoint[0, :].tolist(),
         ["xk"] + matrizpoint[1, :].tolist(),
         ["yk"] + matrizpoint[2, :].tolist(),
+        [''],
+        ['Calculo de los elementos de la matriz']
         ["hk"] + matriz[0, :].tolist(),
         ["λk"] + matriz[1, :].tolist(),
+        ["μk"] + matriz[2, :].tolist(),
         ]
     )
 
