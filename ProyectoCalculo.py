@@ -18,8 +18,8 @@ def convert_to_grayscale(image_path, grayscale_output_path):
 
         print("Convirtiendo a escala de grises...")
         # Recorrido de cada pixel para convertirlo
-        for x in range(width):
-            for y in range(height):
+        for x in range(width): # Eje X: izquierda → derecha
+            for y in range(height): # Eje Y: arriba → abajo
                 r, g, b = image.getpixel((x, y))
                 gray_value = rgb_to_grayscale(r, g, b)
                 grayscale_image.putpixel((x, y), gray_value)
@@ -39,10 +39,10 @@ def apply_canny_edge_detector(image_path, output_path):
         # Leer la imagen en escala de grises con OpenCV
         img = cv2.imread(image_path, 0)
 
-        # Suavisar imagen
+        # Filtro gaussiano para reducir el ruido de la imagen
         blur = cv2.GaussianBlur(img, (5,5), 0)
         # Aplicar filtro Canny
-        edges = cv2.Canny(blur, threshold1=150, threshold2=600)
+        edges = cv2.Canny(blur, threshold1=150, threshold2=500)
 
         # Guardar la imagen resultante
         cv2.imwrite(output_path, edges)
@@ -85,19 +85,45 @@ def find_coordinates(edges, image_path):
 
 
             # Guardar coordenadas en un archivo o imprimirlas
-            print("Coordenadas del contorno superior:")
-            print(top_points)
+            # print("Coordenadas del contorno superior:")
+            # print(top_points)
             return top_contour.squeeze()
         
         else:
             print("No se encontraron contornos.")
+
+def filter_coordinates(coordinates, image_path):
+    coordenadas_np = np.array(coordinates)
+
+    # Encontrar filas únicas para evitar redundancia
+    coordenadas_f = np.unique(coordenadas_np, axis=0)
+    # Encontrar columnas únicas ya que no es posible tener dos coordenadas con el mismo valor de x
+    coordenadas_ordenadas = coordenadas_f[np.lexsort((coordenadas_f[:, 1], coordenadas_f[:, 0]))]
+    _, indices_unicos = np.unique(coordenadas_ordenadas[:, 0], return_index=True)
+    coordenadas_filtradas = coordenadas_ordenadas[indices_unicos]
+
+    print("Coordenadas filtradas (x único, y más pequeño):")
+    print(coordenadas_filtradas)
+
+    # Mostrar la imagen con los puntos
+    for (x, y) in coordenadas_filtradas:
+        imag = cv2.circle(image_path, (x, y), radius=1, color=(0, 0, 255), thickness=-1)  # Puntos rojos
+    
+    cv2.imshow("Puntos filtrados (y más pequeño)", imag)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+
+    return coordenadas_filtradas
+
+
 
 if __name__ == "__main__":
     input_image = "HulkProyecto.jpg"
     grayscale_image = "imagen_gris.jpg"
     print("=== Iniciando programa ===")
     edges_image = convert_to_grayscale(input_image, grayscale_image)
-    find_coordinates(edges_image, cv2.imread(input_image))
+    coordinates = find_coordinates(edges_image, cv2.imread(input_image))
+    coordinates_filter = filter_coordinates(coordinates, cv2.imread(input_image))
     print("=== Finalizado ===")
 
 
