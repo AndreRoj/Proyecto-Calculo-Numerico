@@ -76,7 +76,7 @@ def find_coordinates(edges, image_path):
             # Extraer coordenadas (x, y) del contorno superior
             top_points = top_contour.squeeze()  # Elimina dimensiones innecesarias
 
-            # Opcional: Dibujar el contorno superior en verde para visualización
+            # Dibujar el contorno superior en verde para visualización
             imag = cv2.drawContours(image_path, [top_contour], -1, (0, 0, 255), 2)
             cv2.imwrite('contornos.png', imag)
 
