@@ -159,7 +159,7 @@ def interpolacion_splines_cubicos(coordinates):
 
     #se pasa la matrizpoint con los datos de los puntos(k,xk,yk)
     #y la matriz_elementos con los datos valores calculadors de (hk,λk,μk)
-    #nos retorna la matriz de spline natural
+    #nos retorna la matriz de borde de spline natural
     matriz_bordeSplineN = borde_spline_natural(matriz_elementos)
     matriz_resultante = resultados_sistema(matrizpoint,matriz_elementos)
 
