@@ -156,8 +156,13 @@ def interpolacion_splines_cubicos(coordinates):
     #y la matriz_elementos con los datos valores calculadors de (hk,λk,μk)
     #nos retorna la matriz de spline natural
     matriz_SplineN = borde_spline_natural(matriz_elementos)
+    matriz_resultante = resultados_sistema(matrizpoint,matriz_elementos)
 
-
+    #X*C = R
+    #con X (matriz_SplineN) y R (matriz_resultante), se buscan los valores de C del Sistema
+    C = np.linalg.solve(matriz_SplineN, matriz_resultante)
+    #Redondeado a 4 cifras decimales
+    C_redondeado = np.round(C, decimals=4)
 
     df_coord_element = pd.DataFrame(
         [
@@ -177,11 +182,24 @@ def interpolacion_splines_cubicos(coordinates):
         matriz_SplineN
     )
 
+    df_resultante = pd.DataFrame(
+        matriz_resultante
+    )
+
+    df_C = pd.DataFrame(
+        {
+            'Variable': [f'c{i}' for i in range(len(C_redondeado))],
+            'Valor': C_redondeado.flatten()
+        }
+    )
+
     # Exportar a Excel
     nombre_archivo = "matriz_puntos.xlsx"
     with pd.ExcelWriter(nombre_archivo, engine='openpyxl') as writer:
         df_coord_element.to_excel(writer, sheet_name='Coordenadas y Elementos', header=False, index=False)  # index=False evita una columna extra de índices
         df_splineNatu.to_excel(writer, sheet_name='Spline Natural', header=False, index=False)  # index=False evita una columna extra de índices
+        df_resultante.to_excel(writer, sheet_name='Resultante Spline Natural', header=False, index=False)  
+        df_C.to_excel(writer, sheet_name='Valores C - ResulSist ', header=False, index=False)  
 
     print(f"✅ Datos exportados a '{nombre_archivo}'")
 
@@ -215,6 +233,28 @@ def borde_spline_natural(matriz_elementos): #S''(x0) = 0, S'' (xn) = 0,
     #print(matrizspline_natural)
     return matrizspline_natural
                 
+def resultados_sistema(matriz_points,matriz_elementos):
+    # Crear matriz de n filas × 1 columnas
+    n = matriz_elementos.shape[1]
+    matrizspline_natural = np.zeros((n,1))   
+
+    for fila in range(0,n):
+        if fila == 0 or fila == n-1:
+            matrizspline_natural[fila]=0
+        else:
+            #(3(yk+2 - yk+1)/hk+1) - (3(yk+1 - yk)/hk)
+            yk = matriz_points[2,fila-1] #yk
+            ykmas = matriz_points[2,fila] #yk+1
+            ykmas2 = matriz_points[2,fila+1] #yk+2
+            hk = matriz_elementos[0,fila-1] #hk
+            hkmas = matriz_elementos[0,fila] #hk+1
+            r = (3*(ykmas2 - ykmas)/hkmas) - (3*(ykmas - yk)/hk)
+            matrizspline_natural[fila] = r
+
+    #print(matrizspline_natural)
+    return matrizspline_natural
+
+    
 
 
 if __name__ == "__main__":
