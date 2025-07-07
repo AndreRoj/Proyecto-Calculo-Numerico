@@ -2,6 +2,8 @@ from PIL import Image
 import cv2
 import numpy as np
 import pandas as pd
+from scipy.interpolate import CubicSpline
+import matplotlib.pyplot as plt
 
 # Fórmula para convertir un color RGB a su escala de grises
 def rgb_to_grayscale(r, g, b):
@@ -120,6 +122,9 @@ def interpolacion_splines_cubicos(coordinates):
     # Crear matriz de 3 filas × N columnas para los puntos(k, xk, yk)
     matrizpoint = np.zeros((3, len(coordinates)))  # Inicializar con ceros
 
+    # Invertir los valores de Y para que coincidan con el sistema de coordenadas de Matplotlib
+    coordinates[:, 1] = np.max(coordinates[:, 1]) - coordinates[:, 1]  # Inversión vertical
+
     # Llenar las filas para la matriz de puntos:
     matrizpoint[0, :] = np.arange(len(coordinates))  # valor de k de 0 a n numero de puntos
     matrizpoint[1, :] = coordinates[:,0] #valor de xk
@@ -155,14 +160,33 @@ def interpolacion_splines_cubicos(coordinates):
     #se pasa la matrizpoint con los datos de los puntos(k,xk,yk)
     #y la matriz_elementos con los datos valores calculadors de (hk,λk,μk)
     #nos retorna la matriz de spline natural
-    matriz_SplineN = borde_spline_natural(matriz_elementos)
+    matriz_bordeSplineN = borde_spline_natural(matriz_elementos)
     matriz_resultante = resultados_sistema(matrizpoint,matriz_elementos)
 
     #X*C = R
-    #con X (matriz_SplineN) y R (matriz_resultante), se buscan los valores de C del Sistema
-    C = np.linalg.solve(matriz_SplineN, matriz_resultante)
+    #con X (matriz_bordeSplineN) y R (matriz_resultante), se buscan los valores de C del Sistema
+    C = np.linalg.solve(matriz_bordeSplineN, matriz_resultante)
     #Redondeado a 4 cifras decimales
     C_redondeado = np.round(C, decimals=4)
+
+    spline = CubicSpline(matrizpoint[1,:], matrizpoint[2,:], bc_type='natural')
+
+    # print("Coeficientes (a, b, c, d) por intervalo:")
+    # print(spline.c)
+
+    x_fine = np.linspace(min(matrizpoint[1, :]), max(matrizpoint[1, :]), 1000)
+    y_fine = spline(x_fine)
+
+    plt.ylim(0, 150)  # Límite inferior (y_min) y superior (y_max)
+    # Graficar
+    plt.plot(matrizpoint[1,:], matrizpoint[2,:], 'ro', label='Puntos originales')
+    plt.plot(x_fine, y_fine, 'b-', label='Spline cúbico')
+    plt.legend()
+    plt.xlabel('x')
+    plt.ylabel('y')
+    plt.title('Interpolación con CubicSpline')
+    plt.grid(True)
+    plt.show()
 
     df_coord_element = pd.DataFrame(
         [
@@ -178,8 +202,8 @@ def interpolacion_splines_cubicos(coordinates):
         ]
     )
 
-    df_splineNatu = pd.DataFrame(
-        matriz_SplineN
+    df_borde_splineNatu = pd.DataFrame(
+        matriz_bordeSplineN
     )
 
     df_resultante = pd.DataFrame(
@@ -197,8 +221,8 @@ def interpolacion_splines_cubicos(coordinates):
     nombre_archivo = "matriz_puntos.xlsx"
     with pd.ExcelWriter(nombre_archivo, engine='openpyxl') as writer:
         df_coord_element.to_excel(writer, sheet_name='Coordenadas y Elementos', header=False, index=False)  # index=False evita una columna extra de índices
-        df_splineNatu.to_excel(writer, sheet_name='Spline Natural', header=False, index=False)  # index=False evita una columna extra de índices
-        df_resultante.to_excel(writer, sheet_name='Resultante Spline Natural', header=False, index=False)  
+        df_borde_splineNatu.to_excel(writer, sheet_name='Borde Spline Natural', header=False, index=False)  # index=False evita una columna extra de índices
+        df_resultante.to_excel(writer, sheet_name='Resultante Borde Spline Natural', header=False, index=False)  
         df_C.to_excel(writer, sheet_name='Valores C - ResulSist ', header=False, index=False)  
 
     print(f"✅ Datos exportados a '{nombre_archivo}'")
@@ -253,8 +277,6 @@ def resultados_sistema(matriz_points,matriz_elementos):
 
     #print(matrizspline_natural)
     return matrizspline_natural
-
-    
 
 
 if __name__ == "__main__":
